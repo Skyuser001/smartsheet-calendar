@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smartsheet Calendar Generator</title>
+  <!-- html2pdf Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; margin: 2rem; background: #f8fafc; color: #0f172a; }
+    .container { max-width: 900px; margin: 0 auto; }
+    h2 { margin-top: 0; color: #1e293b; }
+    textarea { width: 100%; height: 120px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box; resize: vertical; font-family: monospace; }
+    .controls { margin: 16px 0; display: flex; gap: 12px; align-items: center; }
+    button { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; }
+    button:hover { background: #1d4ed8; }
+    button.pdf-btn { background: #059669; }
+    button.pdf-btn:hover { background: #047857; }
+    
+    #pdfArea { background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 20px; }
+    .calendar-title { text-align: center; margin: 0 0 16px 0; color: #1e293b; font-size: 18px; font-weight: bold; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+    .day-header { font-weight: bold; text-align: center; padding: 10px; background: #334155; color: white; border-radius: 6px; font-size: 13px; text-transform: uppercase; }
+    .day-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 6px; min-height: 75px; text-align: center; box-sizing: border-box; }
+    .day-card.empty { background: transparent; border: none; }
+    .date-text { font-size: 13px; color: #475569; font-weight: 700; margin-bottom: 8px; }
+    .tag { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .tag-All { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .tag-NA { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    .tag-Night, .tag-Overnight { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Smartsheet Calendar Generator</h2>
+    <p style="font-size: 14px; color: #64748b; margin-bottom: 12px;">Paste your raw data below and click <strong>Generate Calendar</strong>.</p>
+    
+    <textarea id="rawInput" placeholder="Paste your data here..."></textarea>
+    
+    <div class="controls">
+      <button onclick="generateCalendar()">1. Generate Calendar</button>
+      <button class="pdf-btn" onclick="downloadPDF()">2. Download PDF</button>
+    </div>
+
+    <div id="pdfArea">
+      <h3 class="calendar-title" id="calTitle">Schedule Calendar</h3>
+      <div id="calendar" class="calendar-grid"></div>
+    </div>
+  </div>
+
+  <script>
+    function parseData(text) {
+      const pattern = /(Sun|Mon|Tue|Wed|Thu|Fri|Sat),\s*([A-Za-z]+)\s*(\d+)([A-Za-z/]+)/g;
+      const matches = [];
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        matches.push({ day: match[1], month: match[2], date: match[3], status: match[4] });
+      }
+      return matches;
+    }
+
+    function renderCalendar(items) {
+      const calendarEl = document.getElementById("calendar");
+      calendarEl.innerHTML = "";
+      const daysOrder = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      
+      daysOrder.forEach(day => {
+        const header = document.createElement("div");
+        header.className = "day-header";
+        header.innerText = day;
+        calendarEl.appendChild(header);
+      });
+
+      if (items.length === 0) return;
+
+      document.getElementById("calTitle").innerText = `${items[0].month} Schedule Calendar`;
+
+      const firstDayIdx = daysOrder.indexOf(items[0].day);
+      for (let i = 0; i < firstDayIdx; i++) {
+        const empty = document.createElement("div");
+        empty.className = "day-card empty";
+        calendarEl.appendChild(empty);
+      }
+
+      items.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "day-card";
+        const tagClass = (item.status === "All" || item.status === "NA") ? `tag-${item.status}` : "tag-Night";
+        card.innerHTML = `
+          <div class="date-text">${item.month} ${item.date}</div>
+          <div class="tag ${tagClass}">${item.status}</div>
+        `;
+        calendarEl.appendChild(card);
+      });
+    }
+
+    function generateCalendar() {
+      const text = document.getElementById("rawInput").value;
+      const items = parseData(text);
+      if (items.length === 0) {
+        alert("No valid dates found. Make sure you pasted data like: Sun, Aug 2NA Mon, Aug 3All");
+        return;
+      }
+      renderCalendar(items);
+    }
+
+    function downloadPDF() {
+      const calendarEl = document.getElementById("calendar");
+      if (calendarEl.children.length === 0) {
+        alert("Please click 'Generate Calendar' first before downloading the PDF.");
+        return;
+      }
+      const element = document.getElementById('pdfArea');
+      const opt = {
+        margin:       10,
+        filename:     'Smartsheet_Calendar.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+  </script>
+</body>
+</html>
