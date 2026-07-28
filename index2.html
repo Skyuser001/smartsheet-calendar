@@ -7,56 +7,83 @@
   <!-- html2pdf Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; margin: 2rem; background: #f8fafc; color: #0f172a; }
-    .container { max-width: 950px; margin: 0 auto; }
-    h2 { margin-top: 0; color: #1e293b; }
-    textarea { width: 100%; height: 110px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box; resize: vertical; font-family: monospace; }
-    .controls { margin: 16px 0; display: flex; gap: 12px; align-items: center; }
-    button { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; margin: 1.5rem; background: #f8fafc; color: #0f172a; }
+    .container { max-width: 1000px; margin: 0 auto; }
+    h2 { margin-top: 0; margin-bottom: 6px; color: #1e293b; }
+    textarea { width: 100%; height: 90px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; box-sizing: border-box; resize: vertical; font-family: monospace; }
+    .controls { margin: 12px 0; display: flex; gap: 12px; align-items: center; }
+    button { background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; }
     button:hover { background: #1d4ed8; }
     button.pdf-btn { background: #059669; }
     button.pdf-btn:hover { background: #047857; }
     
-    /* Calendar Grid Layout */
-    #pdfArea { background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 20px; }
-    .calendar-title { text-align: center; margin: 0 0 16px 0; color: #1e293b; font-size: 18px; font-weight: bold; }
-    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
-    .day-header { font-weight: bold; text-align: center; padding: 10px; background: #334155; color: white; border-radius: 6px; font-size: 13px; text-transform: uppercase; }
+    /* PDF Printable Area - Compact Layout */
+    #pdfArea { 
+      background: #ffffff; 
+      padding: 10px; 
+      border-radius: 8px; 
+      border: 1px solid #e2e8f0; 
+      margin-top: 10px; 
+    }
+    .calendar-title { 
+      text-align: center; 
+      margin: 0 0 8px 0; 
+      color: #1e293b; 
+      font-size: 16px; 
+      font-weight: bold; 
+    }
     
-    /* Day Card Styling */
+    /* Grid & Cards configured to prevent multi-page overflow */
+    .calendar-grid { 
+      display: grid; 
+      grid-template-columns: repeat(7, 1fr); 
+      gap: 5px; 
+    }
+    .day-header { 
+      font-weight: bold; 
+      text-align: center; 
+      padding: 6px 2px; 
+      background: #334155; 
+      color: white; 
+      border-radius: 4px; 
+      font-size: 12px; 
+      text-transform: uppercase; 
+    }
+    
     .day-card { 
       background: #f8fafc; 
       border: 1px solid #e2e8f0; 
-      border-radius: 6px; 
-      padding: 10px 6px; 
-      min-height: 100px; 
+      border-radius: 4px; 
+      padding: 6px 4px; 
+      min-height: 65px; 
       text-align: center; 
       box-sizing: border-box; 
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: space-between;
     }
     .day-card.empty { background: transparent; border: none; }
-    .date-text { font-size: 13px; color: #475569; font-weight: 700; margin-bottom: 6px; }
+    .date-text { font-size: 11px; color: #475569; font-weight: 700; margin-bottom: 3px; }
     
-    /* Selection Tag */
-    .tag { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+    /* Compact Selection Tags */
+    .tag { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
     .tag-All { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
     .tag-NA { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
     .tag-Night, .tag-Overnight { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
 
-    /* Editable Comment Field */
+    /* Compact Editable Comment Field */
     .day-comment {
       width: 100%;
       border: 1px dashed #cbd5e1;
-      border-radius: 4px;
-      padding: 4px;
-      font-size: 11px;
+      border-radius: 3px;
+      padding: 2px;
+      font-size: 10px;
       color: #334155;
       background: #ffffff;
       box-sizing: border-box;
       resize: none;
-      height: 38px;
+      height: 26px;
       text-align: center;
       font-family: inherit;
     }
@@ -66,7 +93,7 @@
       background: #fff;
     }
     .day-comment::placeholder {
-      color: #94a3b8;
+      color: #cbd5e1;
       font-style: italic;
     }
   </style>
@@ -74,7 +101,7 @@
 <body>
   <div class="container">
     <h2>Smartsheet Calendar Generator</h2>
-    <p style="font-size: 14px; color: #64748b; margin-bottom: 12px;">Paste raw data, click <strong>Generate Calendar</strong>, and add custom notes to any day before exporting to PDF.</p>
+    <p style="font-size: 13px; color: #64748b; margin-bottom: 8px;">Paste raw data, click <strong>Generate Calendar</strong>, and add notes to dates before downloading PDF.</p>
     
     <textarea id="rawInput" placeholder="Paste your data here..."></textarea>
     
@@ -91,7 +118,6 @@
 
   <script>
     function parseData(rawText) {
-      // Clean tabs, enter breaks, and multiple spaces
       const cleanText = rawText.replace(/[\t\r\n]+/g, " ").replace(/\s+/g, " ");
       const pattern = /(Sun|Mon|Tue|Wed|Thu|Fri|Sat),\s*([A-Za-z]+)\s*(\d+)\s*([A-Za-z/]+)/gi;
       
@@ -145,7 +171,7 @@
         card.innerHTML = `
           <div class="date-text">${item.month} ${item.date}</div>
           <div class="tag ${tagClass}">${item.status}</div>
-          <textarea class="day-comment" placeholder="+ Add note..."></textarea>
+          <textarea class="day-comment" placeholder="+ note"></textarea>
         `;
         calendarEl.appendChild(card);
       });
@@ -168,7 +194,6 @@
         return;
       }
 
-      // Convert comments into clean printable text blocks so input borders don't ruin the PDF look
       const comments = document.querySelectorAll('.day-comment');
       comments.forEach(comment => {
         if (comment.value.trim() !== "") {
@@ -178,16 +203,18 @@
       });
 
       const element = document.getElementById('pdfArea');
+      
+      // Configured settings to squeeze all rows onto 1 single A4 Landscape page
       const opt = {
-        margin:       8,
-        filename:     'Smartsheet_Calendar_Notes.pdf',
+        margin:       [5, 5, 5, 5], // Top, Left, Bottom, Right tight margins (in mm)
+        filename:     'Smartsheet_Calendar.pdf',
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' },
+        pagebreak:    { mode: 'avoid-all' } // Prevents slicing rows across pages
       };
 
       html2pdf().set(opt).from(element).save().then(() => {
-        // Reset comment box borders after PDF is rendered
         comments.forEach(comment => {
           comment.style.border = "1px dashed #cbd5e1";
           comment.style.background = "#ffffff";
