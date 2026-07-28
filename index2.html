@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smartsheet Calendar Generator</title>
+  <!-- html2pdf Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; margin: 2rem; background: #f8fafc; color: #0f172a; }
+    .container { max-width: 950px; margin: 0 auto; }
+    h2 { margin-top: 0; color: #1e293b; }
+    textarea { width: 100%; height: 110px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box; resize: vertical; font-family: monospace; }
+    .controls { margin: 16px 0; display: flex; gap: 12px; align-items: center; }
+    button { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; }
+    button:hover { background: #1d4ed8; }
+    button.pdf-btn { background: #059669; }
+    button.pdf-btn:hover { background: #047857; }
+    
+    /* Calendar Grid Layout */
+    #pdfArea { background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 20px; }
+    .calendar-title { text-align: center; margin: 0 0 16px 0; color: #1e293b; font-size: 18px; font-weight: bold; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+    .day-header { font-weight: bold; text-align: center; padding: 10px; background: #334155; color: white; border-radius: 6px; font-size: 13px; text-transform: uppercase; }
+    
+    /* Day Card Styling */
+    .day-card { 
+      background: #f8fafc; 
+      border: 1px solid #e2e8f0; 
+      border-radius: 6px; 
+      padding: 10px 6px; 
+      min-height: 100px; 
+      text-align: center; 
+      box-sizing: border-box; 
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .day-card.empty { background: transparent; border: none; }
+    .date-text { font-size: 13px; color: #475569; font-weight: 700; margin-bottom: 6px; }
+    
+    /* Selection Tag */
+    .tag { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+    .tag-All { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .tag-NA { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    .tag-Night, .tag-Overnight { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+
+    /* Editable Comment Field */
+    .day-comment {
+      width: 100%;
+      border: 1px dashed #cbd5e1;
+      border-radius: 4px;
+      padding: 4px;
+      font-size: 11px;
+      color: #334155;
+      background: #ffffff;
+      box-sizing: border-box;
+      resize: none;
+      height: 38px;
+      text-align: center;
+      font-family: inherit;
+    }
+    .day-comment:focus {
+      outline: none;
+      border-color: #2563eb;
+      background: #fff;
+    }
+    .day-comment::placeholder {
+      color: #94a3b8;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Smartsheet Calendar Generator</h2>
+    <p style="font-size: 14px; color: #64748b; margin-bottom: 12px;">Paste raw data, click <strong>Generate Calendar</strong>, and add custom notes to any day before exporting to PDF.</p>
+    
+    <textarea id="rawInput" placeholder="Paste your data here..."></textarea>
+    
+    <div class="controls">
+      <button onclick="generateCalendar()">1. Generate Calendar</button>
+      <button class="pdf-btn" onclick="downloadPDF()">2. Download PDF</button>
+    </div>
+
+    <div id="pdfArea">
+      <h3 class="calendar-title" id="calTitle">Schedule Calendar</h3>
+      <div id="calendar" class="calendar-grid"></div>
+    </div>
+  </div>
+
+  <script>
+    function parseData(rawText) {
+      // Clean tabs, enter breaks, and multiple spaces
+      const cleanText = rawText.replace(/[\t\r\n]+/g, " ").replace(/\s+/g, " ");
+      const pattern = /(Sun|Mon|Tue|Wed|Thu|Fri|Sat),\s*([A-Za-z]+)\s*(\d+)\s*([A-Za-z/]+)/gi;
+      
+      const matches = [];
+      let match;
+      while ((match = pattern.exec(cleanText)) !== null) {
+        matches.push({ 
+          day: match[1], 
+          month: match[2], 
+          date: match[3], 
+          status: match[4] 
+        });
+      }
+      return matches;
+    }
+
+    function renderCalendar(items) {
+      const calendarEl = document.getElementById("calendar");
+      calendarEl.innerHTML = "";
+      const daysOrder = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      
+      daysOrder.forEach(day => {
+        const header = document.createElement("div");
+        header.className = "day-header";
+        header.innerText = day;
+        calendarEl.appendChild(header);
+      });
+
+      if (items.length === 0) return;
+
+      document.getElementById("calTitle").innerText = `${items[0].month} Schedule Calendar`;
+
+      const firstDayNormalized = items[0].day.charAt(0).toUpperCase() + items[0].day.slice(1).toLowerCase();
+      const firstDayIdx = daysOrder.indexOf(firstDayNormalized);
+      
+      for (let i = 0; i < firstDayIdx; i++) {
+        const empty = document.createElement("div");
+        empty.className = "day-card empty";
+        calendarEl.appendChild(empty);
+      }
+
+      items.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "day-card";
+        
+        const statusUpper = item.status.toUpperCase();
+        let tagClass = "tag-Night";
+        if (statusUpper === "ALL") tagClass = "tag-All";
+        if (statusUpper === "NA") tagClass = "tag-NA";
+
+        card.innerHTML = `
+          <div class="date-text">${item.month} ${item.date}</div>
+          <div class="tag ${tagClass}">${item.status}</div>
+          <textarea class="day-comment" placeholder="+ Add note..."></textarea>
+        `;
+        calendarEl.appendChild(card);
+      });
+    }
+
+    function generateCalendar() {
+      const text = document.getElementById("rawInput").value;
+      const items = parseData(text);
+      if (items.length === 0) {
+        alert("No valid dates found in the pasted text.");
+        return;
+      }
+      renderCalendar(items);
+    }
+
+    function downloadPDF() {
+      const calendarEl = document.getElementById("calendar");
+      if (calendarEl.children.length === 0) {
+        alert("Please click 'Generate Calendar' first before downloading the PDF.");
+        return;
+      }
+
+      // Convert comments into clean printable text blocks so input borders don't ruin the PDF look
+      const comments = document.querySelectorAll('.day-comment');
+      comments.forEach(comment => {
+        if (comment.value.trim() !== "") {
+          comment.style.border = "none";
+          comment.style.background = "transparent";
+        }
+      });
+
+      const element = document.getElementById('pdfArea');
+      const opt = {
+        margin:       8,
+        filename:     'Smartsheet_Calendar_Notes.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      };
+
+      html2pdf().set(opt).from(element).save().then(() => {
+        // Reset comment box borders after PDF is rendered
+        comments.forEach(comment => {
+          comment.style.border = "1px dashed #cbd5e1";
+          comment.style.background = "#ffffff";
+        });
+      });
+    }
+  </script>
+</body>
+</html>
